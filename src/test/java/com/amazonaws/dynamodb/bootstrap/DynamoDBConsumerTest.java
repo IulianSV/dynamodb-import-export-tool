@@ -20,9 +20,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.powermock.api.easymock.PowerMock.*;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -43,11 +45,24 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 @PowerMockIgnore("javax.management.*")
 public class DynamoDBConsumerTest {
 
+    private static String tableName = "testTableName";
+    private double rateLimit = 12.3;
+    private static AmazonDynamoDBClient mockClient;
+    private static ThreadPoolExecutor mockThreadPool;
+
+    /**
+     * Sets up the initialization of common mocks for the below tests.
+     */
+    private static void setupMockInitialization() {
+        mockClient = createMock(AmazonDynamoDBClient.class);
+        mockThreadPool = createMock(ThreadPoolExecutor.class);
+    }
     /**
      * Test that a ScanResult splits into the correct number of batches.
      */
     @Test
     public void splitResultIntoBatchesTest() {
+        setupMockInitialization();
         final double numItems = 111.0;
 
         String tableName = "test tableName";
@@ -65,7 +80,7 @@ public class DynamoDBConsumerTest {
         SegmentedScanResult result = new SegmentedScanResult(scanResult, 0);
 
         replayAll();
-        List<BatchWriteItemRequest> batches = DynamoDBConsumer
+        List<BatchWriteItemRequest> batches = new DynamoDBConsumer(mockClient, tableName, rateLimit, mockThreadPool)
                 .splitResultIntoBatches(result.getScanResult(), tableName);
         assertEquals(Math.ceil(numItems / BootstrapConstants.MAX_BATCH_SIZE_WRITE_ITEM),
                 batches.size(), 0.0);

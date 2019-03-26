@@ -14,11 +14,14 @@
  */
 package com.amazonaws.dynamodb.bootstrap;
 
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -52,7 +55,7 @@ public class CommandLineInterface {
      * @param args
      */
     public static void main(String[] args) {
-        CommandLineArgs params = new CommandLineArgs();
+        CLIArgs params = new CLIArgs();
         JCommander cmd = new JCommander(params);
 
         try {
@@ -78,6 +81,14 @@ public class CommandLineInterface {
         final double writeThroughputRatio = params.getWriteThroughputRatio();
         final int maxWriteThreads = params.getMaxWriteThreads();
         final boolean consistentScan = params.getConsistentScan();
+        final List<String> sourceFields = params.getSourceFields();
+        final List<String> destinationFields = params.getDestinationFields();
+
+        if (sourceFields.size() != destinationFields.size()) {
+            LOGGER.error("Source fields count should match the destination fields count.");
+            System.exit(1);
+        }
+        final List<Convertible> mappings = createMappings(sourceFields, destinationFields);
 
         final ClientConfiguration sourceConfig = new ClientConfiguration().withMaxConnections(BootstrapConstants.MAX_CONN_SIZE);
         final ClientConfiguration destinationConfig = new ClientConfiguration().withMaxConnections(BootstrapConstants.MAX_CONN_SIZE);
@@ -110,11 +121,12 @@ public class CommandLineInterface {
         try {
             ExecutorService sourceExec = getSourceThreadPool(numSegments);
             ExecutorService destinationExec = getDestinationThreadPool(maxWriteThreads);
-            DynamoDBConsumer consumer = new DynamoDBConsumer(destinationClient,
-                    destinationTable, writeThroughput, destinationExec);
+            DynamoDBMigrationConsumer consumer = new DynamoDBMigrationConsumer(destinationClient,
+                    destinationTable, mappings, writeThroughput, destinationExec);
 
             final DynamoDBBootstrapWorker worker = new DynamoDBBootstrapWorker(
                     sourceClient, readThroughput, sourceTable, sourceExec,
+
                     params.getSection(), params.getTotalSections(), numSegments, consistentScan);
 
             LOGGER.info("Starting transfer...");
@@ -176,6 +188,12 @@ public class CommandLineInterface {
                 new ArrayBlockingQueue<Runnable>(numSegments),
                 new ThreadPoolExecutor.CallerRunsPolicy());
         return exec;
+    }
+
+    private static List<Convertible> createMappings(List<String> sourceFields, List<String> destinationFields) {
+        return IntStream.range(0, sourceFields.size())
+                .mapToObj(i -> new FieldChange(sourceFields.get(i), destinationFields.get(i)))
+                .collect(Collectors.toList());
     }
 
 }

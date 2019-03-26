@@ -14,12 +14,6 @@
  */
 package com.amazonaws.dynamodb.bootstrap;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.concurrent.Callable;
-
 import com.amazonaws.dynamodb.bootstrap.constants.BootstrapConstants;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.BatchWriteItemRequest;
@@ -27,17 +21,28 @@ import com.amazonaws.services.dynamodbv2.model.BatchWriteItemResult;
 import com.amazonaws.services.dynamodbv2.model.ConsumedCapacity;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.google.common.util.concurrent.RateLimiter;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Callable class that is used to write a batch of items to DynamoDB with exponential backoff.
  */
 public class DynamoDBConsumerWorker implements Callable<Void> {
 
+    private static final Logger LOGGER = LogManager
+            .getLogger(DynamoDBMigrationConsumer.class);
+
     private final AmazonDynamoDBClient client;
     private final RateLimiter rateLimiter;
+    private final String tableName;
     private long exponentialBackoffTime;
     private BatchWriteItemRequest batch;
-    private final String tableName;
 
     /**
      * Callable class that when called will try to write a batch to a DynamoDB
@@ -45,8 +50,8 @@ public class DynamoDBConsumerWorker implements Callable<Void> {
      * off until it succeeds.
      */
     public DynamoDBConsumerWorker(BatchWriteItemRequest batchWriteItemRequest,
-            AmazonDynamoDBClient client, RateLimiter rateLimiter,
-            String tableName) {
+                                  AmazonDynamoDBClient client, RateLimiter rateLimiter,
+                                  String tableName) {
         this.batch = batchWriteItemRequest;
         this.client = client;
         this.rateLimiter = rateLimiter;
@@ -101,6 +106,9 @@ public class DynamoDBConsumerWorker implements Callable<Void> {
                     }
                 }
             } while (unprocessedItems != null && unprocessedItems.get(tableName) != null);
+            return consumedCapacities;
+        } catch (Throwable e) {
+            LOGGER.warn(e);
             return consumedCapacities;
         } finally {
             if (interrupted) {

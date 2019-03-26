@@ -30,6 +30,7 @@ import com.amazonaws.services.dynamodbv2.model.PutRequest;
 import com.amazonaws.services.dynamodbv2.model.ReturnConsumedCapacity;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.RateLimiter;
 
 /**
@@ -82,7 +83,7 @@ public class DynamoDBConsumer extends AbstractLogConsumer {
      * Splits up a ScanResult into a list of BatchWriteItemRequests of size 25
      * items or less each.
      */
-    public static List<BatchWriteItemRequest> splitResultIntoBatches(
+    public List<BatchWriteItemRequest> splitResultIntoBatches(
             ScanResult result, String tableName) {
         List<BatchWriteItemRequest> batches = new LinkedList<BatchWriteItemRequest>();
         Iterator<Map<String, AttributeValue>> it = result.getItems().iterator();
@@ -92,7 +93,9 @@ public class DynamoDBConsumer extends AbstractLogConsumer {
         List<WriteRequest> writeRequests = new LinkedList<WriteRequest>();
         int i = 0;
         while (it.hasNext()) {
-            PutRequest put = new PutRequest(it.next());
+            final Map<String, AttributeValue> itemFields = it.next();
+            convert(itemFields);
+            PutRequest put = new PutRequest(itemFields);
             writeRequests.add(new WriteRequest(put));
 
             i++;
@@ -110,5 +113,13 @@ public class DynamoDBConsumer extends AbstractLogConsumer {
             batches.add(req);
         }
         return batches;
+    }
+
+    public List<Convertible> getMappings() {
+        return Lists.newArrayList();
+    }
+
+    public void convert(Map<String, AttributeValue> itemValues) {
+        getMappings().forEach(convertible -> convertible.convert(itemValues));
     }
 }
