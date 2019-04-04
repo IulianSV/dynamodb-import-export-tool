@@ -15,6 +15,7 @@
 package com.amazonaws.dynamodb.bootstrap;
 
 import com.amazonaws.dynamodb.bootstrap.constants.BootstrapConstants;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.BatchWriteItemRequest;
 import com.amazonaws.services.dynamodbv2.model.BatchWriteItemResult;
@@ -38,7 +39,7 @@ public class DynamoDBConsumerWorker implements Callable<Void> {
     private static final Logger LOGGER = LogManager
             .getLogger(DynamoDBMigrationConsumer.class);
 
-    private final AmazonDynamoDBClient client;
+    private final AmazonDynamoDB client;
     private final RateLimiter rateLimiter;
     private final String tableName;
     private long exponentialBackoffTime;
@@ -50,7 +51,7 @@ public class DynamoDBConsumerWorker implements Callable<Void> {
      * off until it succeeds.
      */
     public DynamoDBConsumerWorker(BatchWriteItemRequest batchWriteItemRequest,
-                                  AmazonDynamoDBClient client, RateLimiter rateLimiter,
+                                  AmazonDynamoDB client, RateLimiter rateLimiter,
                                   String tableName) {
         this.batch = batchWriteItemRequest;
         this.client = client;
@@ -82,7 +83,7 @@ public class DynamoDBConsumerWorker implements Callable<Void> {
      */
     public List<ConsumedCapacity> runWithBackoff(BatchWriteItemRequest req) {
         BatchWriteItemResult writeItemResult = null;
-        List<ConsumedCapacity> consumedCapacities = new LinkedList<ConsumedCapacity>();
+        List<ConsumedCapacity> consumedCapacities = new LinkedList<>();
         Map<String, List<WriteRequest>> unprocessedItems = null;
         boolean interrupted = false;
         try {

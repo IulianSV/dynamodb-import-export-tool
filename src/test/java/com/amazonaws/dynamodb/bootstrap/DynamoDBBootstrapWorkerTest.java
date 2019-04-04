@@ -20,6 +20,9 @@ import static org.powermock.api.easymock.PowerMock.createMock;
 
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.amazonaws.dynamodb.bootstrap.exception.NullReadCapacityException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
+import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -106,4 +109,15 @@ public class DynamoDBBootstrapWorkerTest {
         verifyAll();
     }
 
+    @Test
+    public void getNumberOfSegments() throws NullReadCapacityException {
+        final TableDescription description = new TableDescription();
+        description.setTableSizeBytes(2_200_000_000L);
+        final ProvisionedThroughputDescription provisionedThroughput = new ProvisionedThroughputDescription();
+        provisionedThroughput.setReadCapacityUnits(3000L);
+        provisionedThroughput.setWriteCapacityUnits(3000L);
+        description.setProvisionedThroughput(provisionedThroughput);
+        final int numberOfSegments = DynamoDBBootstrapWorker.getNumberOfSegments(description);
+        System.out.println(numberOfSegments);
+    }
 }

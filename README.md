@@ -3,7 +3,7 @@ The DynamoDB Import Export Tool is designed to perform parallel scans on the sou
 
 ## Requirements ##
 * Maven
-* JRE 1.10+
+* JRE 1.8+
 * Pre-existing source and destination DynamoDB tables
 
 ## Running as an executable
@@ -11,9 +11,8 @@ The DynamoDB Import Export Tool is designed to perform parallel scans on the sou
 1. Build the library:
 
 ```
-    mvn clean package -DskipTests
+    mvn install
 ```
-> **NOTE**: Tests are failing when migrating to JDK 10. Will add another commit when failing tests will be fixed.
 
 2. This produces the target jar in the target/ directory, to start the replication process:
 

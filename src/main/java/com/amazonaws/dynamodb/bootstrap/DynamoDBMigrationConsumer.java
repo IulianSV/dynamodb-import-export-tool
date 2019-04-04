@@ -1,5 +1,6 @@
 package com.amazonaws.dynamodb.bootstrap;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.google.common.collect.Lists;
 
@@ -11,7 +12,7 @@ public class DynamoDBMigrationConsumer extends DynamoDBConsumer {
 
     private final List<Convertible> mappings;
 
-    public DynamoDBMigrationConsumer(AmazonDynamoDBClient client, String tableName, List<Convertible> mappings, double rateLimit, ExecutorService exec) {
+    public DynamoDBMigrationConsumer(AmazonDynamoDB client, String tableName, List<Convertible> mappings, double rateLimit, ExecutorService exec) {
         super(client, tableName, rateLimit, exec);
         this.mappings = Optional.ofNullable(mappings).orElse(Lists.newArrayList());
     }

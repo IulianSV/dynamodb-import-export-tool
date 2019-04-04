@@ -23,6 +23,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -90,15 +94,10 @@ public class CommandLineInterface {
         }
         final List<Convertible> mappings = createMappings(sourceFields, destinationFields);
 
-        final ClientConfiguration sourceConfig = new ClientConfiguration().withMaxConnections(BootstrapConstants.MAX_CONN_SIZE);
-        final ClientConfiguration destinationConfig = new ClientConfiguration().withMaxConnections(BootstrapConstants.MAX_CONN_SIZE);
 
-        final AmazonDynamoDBClient sourceClient = new AmazonDynamoDBClient(
-                new DefaultAWSCredentialsProviderChain(), sourceConfig);
-        final AmazonDynamoDBClient destinationClient = new AmazonDynamoDBClient(
-                new DefaultAWSCredentialsProviderChain(), destinationConfig);
-        sourceClient.setEndpoint(sourceEndpoint);
-        destinationClient.setEndpoint(destinationEndpoint);
+        final AmazonDynamoDB sourceClient = createClient(sourceEndpoint);
+        final AmazonDynamoDB destinationClient = createClient(destinationEndpoint);
+
 
         TableDescription readTableDescription = sourceClient.describeTable(
                 sourceTable).getTable();
@@ -140,6 +139,15 @@ public class CommandLineInterface {
         } catch (SectionOutOfRangeException e) {
             LOGGER.error("Invalid section parameter", e);
         }
+    }
+
+    private static AmazonDynamoDB createClient(String sourceEndpoint) {
+        final ClientConfiguration clientConfiguration = new ClientConfiguration().withMaxConnections(BootstrapConstants.MAX_CONN_SIZE);
+        return AmazonDynamoDBClientBuilder.standard()
+                .withClientConfiguration(clientConfiguration)
+                .withCredentials(new ProfileCredentialsProvider())
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(sourceEndpoint, null))
+                .build();
     }
 
     /**
